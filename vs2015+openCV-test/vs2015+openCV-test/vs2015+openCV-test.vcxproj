@@ -74,7 +74,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\development\developmentTool\OpenCV\opencv\build\include\opencv2;D:\development\developmentTool\OpenCV\opencv\build\include\opencv;$(IncludePath)</IncludePath>
+    <IncludePath>D:\development\developmentTool\OpenCV\opencv\build\include;D:\development\developmentTool\OpenCV\opencv\build\include\opencv2;D:\development\developmentTool\OpenCV\opencv\build\include\opencv;$(IncludePath)</IncludePath>
     <LibraryPath>D:\development\developmentTool\OpenCV\opencv\build\x64\vc12\bin;D:\development\developmentTool\OpenCV\opencv\build\x64\vc12\staticlib;D:\development\developmentTool\OpenCV\opencv\build\x64\vc12\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -82,6 +82,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>D:\development\developmentTool\OpenCV\opencv\build\include\opencv2;D:\development\developmentTool\OpenCV\opencv\build\include\opencv;D:\development\developmentTool\OpenCV\opencv\build\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\development\developmentTool\OpenCV\opencv\build\x64\vc12\staticlib;D:\development\developmentTool\OpenCV\opencv\build\x64\vc12\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -138,6 +140,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>opencv_world300.lib;opencv_ts300.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
