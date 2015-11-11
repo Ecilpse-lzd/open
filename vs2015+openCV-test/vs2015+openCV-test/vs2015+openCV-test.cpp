@@ -47,7 +47,7 @@ void checkLine(IplImage * img)
 	cvShowImage("video", img2);
 
 }
-void main()
+void main1()
 {
 	IplImage *img = cvLoadImage("D:\\p2.jpg", 0);
 
@@ -129,7 +129,7 @@ void main()
 //	cvReleaseImage(&imgavg);
 //	return 0;
 //}
-
+/*
 void FillInternalContours(IplImage *pBinary, double dAreaThre)
 {
 	double dConArea;
