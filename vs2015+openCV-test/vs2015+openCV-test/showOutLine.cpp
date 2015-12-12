@@ -67,15 +67,17 @@ void FillInternalContours(IplImage *pBinary, double dAreaThre)
 				nei++;
 				// 内轮廓面积   
 				dConArea = fabs(cvContourArea(pConInner, CV_WHOLE_SEQ));
-				printf("%f\n", dConArea);
+				printf("内轮廓面积%f\n", dConArea);
 			}
 			CvRect rect = cvBoundingRect(pContour, 0);
 			cvRectangle(pBinary, cvPoint(rect.x, rect.y),
 				cvPoint(rect.x + rect.width, rect.y + rect.height),
 				CV_RGB(255, 255, 255), 1, 8, 0);
+			dConArea = fabs(cvContourArea(pContour, CV_WHOLE_SEQ));
+			printf("外轮廓面积%f\n", dConArea);
 		}
 
-		printf("wai = %d, nei = %d", wai, nei);
+		//printf("外轮廓数 = %d, 内轮廓数 = %d\n", wai, nei);
 		cvReleaseMemStorage(&pStorage);
 		pStorage = NULL;
 	}
@@ -181,13 +183,7 @@ void useOtsu2(IplImage *imgOtsu)
 	 cvNamedWindow("imgOtsu", CV_WINDOW_AUTOSIZE);
 	 //cvShowImage("imgOtsu", imgOtsu);//显示图像  
 }
-/*============================================================================
- = 代码内容：最大熵阈值分割
- = 修改日期:2009-3-3
- = 作者:crond123
- = 博客:http://blog.csdn.net/crond123/
- = E_Mail:crond123@163.com
- ===============================================================================*/
+
 // 计算当前位置的能量熵  
 int HistogramBins = 256;
 float HistogramRange1[2] = { 0,255 };
@@ -251,7 +247,7 @@ void useMaxEntropy(IplImage *imgMaxEntropy)
  = 代码内容：基本全局阈值法
  ==============================================================================*/
 int BasicGlobalThreshold(int*pg, int start, int end)
-{ // 基本全局阈值法  
+{   
 	int i, t, t1, t2, k1, k2;
 	double u, u1, u2;
 	t = 0;
@@ -321,7 +317,7 @@ void show()
 	cvMoveWindow("background", 360, 0);
 	cvMoveWindow("foreground", 690, 0);
 
-	pCapture = cvCaptureFromFile("d:\\测试\\VID_20150914_160002.mp4");
+	pCapture = cvCaptureFromFile("d:\\测试\\345.mp4");
 	//	pCapture = cvCreateCameraCapture(0);
 	while (pFrame = cvQueryFrame(pCapture))
 	{
@@ -341,28 +337,29 @@ void show()
 			cvConvert(pFrImg, pFrameMat);
 			cvConvert(pFrImg, pFrMat);
 			cvConvert(pFrImg, pBkMat);
+			cvWaitKey();
 		}
 		else
 		{
 			cvCvtColor(pFrame, pFrImg, CV_BGR2GRAY);
 			graFilterMid(pFrImg, 1);
-			cvConvert(pFrImg, pFrameMat);
+			
 			//先做高斯滤波，以平滑图像  
 			
 			cvSmooth(pFrImg, pFrImg, CV_GAUSSIAN, 3, 0, 0);
-			
+			cvConvert(pFrImg, pFrameMat);
 			//当前帧跟背景图相减  
 			cvAbsDiff(pFrameMat, pBkMat, pFrMat);
 			//二值化前景图  
 			//use(pFrImg);
 			//useMaxEntropy(pFrImg);
-			cvThreshold(pFrMat, pFrImg, 10, 255.0, CV_THRESH_BINARY);
+			cvThreshold(pFrMat, pFrImg, 80, 255.0, CV_THRESH_BINARY);
 			////进行形态学滤波，去掉噪音
-			cvErode(pFrImg, pFrImg, 0, 6);
-			cvDilate(pFrImg, pFrImg, 0, 7);
+			cvErode(pFrImg, pFrImg, 0, 10);
+			//cvDilate(pFrImg, pFrImg, 0, 7);
 
 			//更新背景  
-			cvRunningAvg(pFrameMat, pBkMat, 0.003, 0);
+			//cvRunningAvg(pFrameMat, pBkMat, 0.003, 0);
 			//将背景转化为图像格式，用以显示  
 			cvConvert(pBkMat, pBkImg);
 			pFrame->origin = IPL_ORIGIN_BL;
@@ -399,9 +396,218 @@ void show()
 
 }
 
+
+
+
+static void refineSegments(const Mat& img, Mat& mask, Mat& dst)
+{
+	int niters = 3;
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	Mat temp;
+	dilate(mask, temp, Mat(), Point(-1, -1), niters);
+	erode(temp, temp, Mat(), Point(-1, -1), niters * 2);
+	dilate(temp, temp, Mat(), Point(-1, -1), niters);
+	findContours(temp, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
+	dst = Mat::zeros(img.size(), CV_8UC3);
+	if (contours.size() == 0)
+		return;
+	// iterate through all the top-level contours,
+	// draw each connected component with its own random color
+	int idx = 0, largestComp = 0;
+	double maxArea = 0;
+	for (; idx >= 0; idx = hierarchy[idx][0])
+	{
+		const vector<Point>& c = contours[idx];
+		double area = fabs(contourArea(Mat(c)));
+		if (area > maxArea)
+		{
+			maxArea = area;
+			largestComp = idx;
+		}
+	}
+	Scalar color(0, 0, 255);
+	drawContours(dst, contours, largestComp, color, FILLED, LINE_8, hierarchy);
+}
+
+
+
+Ptr<BackgroundSubtractor> pMOG;
+Ptr<BackgroundSubtractor> pMOG2;
+int dt_background()
+{
+	VideoCapture cap;
+	bool update_bg_model = true;
+
+	
+
+	cap.open(0);
+
+	if (!cap.isOpened())
+	{
+		printf("\nCan not open camera or video file\n");
+		return -1;
+	}
+
+	Mat tmp_frame, bgmask, out_frame;
+
+	cap >> tmp_frame;
+	if (!tmp_frame.data)
+	{
+		printf("can not read data from the video source\n");
+		return -1;
+	}
+
+	namedWindow("video", 1);
+	namedWindow("segmented", 1);
+
+	Ptr<BackgroundSubtractorMOG2> bgsubtractor = createBackgroundSubtractorMOG2();
+	bgsubtractor->setVarThreshold(10);
+
+	for (;;)
+	{
+		cap >> tmp_frame;
+		if (!tmp_frame.data)
+			break;
+		bgsubtractor->apply(tmp_frame, bgmask, update_bg_model ? -1 : 0);
+		refineSegments(tmp_frame, bgmask, out_frame);
+		imshow("video", tmp_frame);
+		imshow("segmented", out_frame);
+		int keycode = waitKey(1);
+		if (keycode == 27)
+			break;
+		if (keycode == ' ')
+		{
+			update_bg_model = !update_bg_model;
+			printf("\n\t>‘背景学习’技术的状态 = %d\n", update_bg_model);
+		}
+	}
+
+	return 0;
+}
+
+
+
+
+ //this is a sample for foreground detection functions
+string src_img_name = "WavingTrees/b00";
+const char *src_img_name1;
+Mat img, fgmask, fgimg;
+int i = -1;
+char chari[500];
+bool update_bg_model = true;
+bool pause = false;
+
+//第一种gmm,用的是KaewTraKulPong, P. and R. Bowden (2001).
+//An improved adaptive background mixture model for real-time tracking with shadow detection.
+BackgroundSubtractorMOG2* bg_model = createBackgroundSubtractorMOG2();
+
+//void refineSegments(const Mat& img, Mat& mask, Mat& dst)
+//{
+//	int niters = 3;
+//
+//	vector<vector<Point> > contours;
+//	vector<Vec4i> hierarchy;
+//	Mat temp;
+//	dilate(mask, temp, Mat(), Point(-1, -1), niters);//膨胀，3*3的element，迭代次数为niters
+//	erode(temp, temp, Mat(), Point(-1, -1), niters * 2);//腐蚀
+//	dilate(temp, temp, Mat(), Point(-1, -1), niters);
+//
+//	findContours(temp, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);//找轮廓
+//
+//	dst = Mat::zeros(img.size(), CV_8UC3);
+//	if (contours.size() == 0)
+//		return;
+//
+//	// iterate through all the top-level contours,
+//	// draw each connected component with its own random color
+//	int idx = 0, largestComp = 0;
+//	double maxArea = 0;
+//
+//	for (; idx >= 0; idx = hierarchy[idx][0])//这句没怎么看懂
+//	{
+//		const vector<Point>& c = contours[idx];
+//		double area = fabs(contourArea(Mat(c)));
+//		if (area > maxArea)
+//		{
+//			maxArea = area;
+//			largestComp = idx;//找出包含面积最大的轮廓
+//		}
+//	}
+//	Scalar color(0, 255, 0);
+//	drawContours(dst, contours, largestComp, color, CV_FILLED, 8, hierarchy);
+//}
+
+//int gm()
+//{
+//	//bg_model.noiseSigma = 10;
+//	img = imread("WavingTrees/b00000.bmp");
+//	if (img.empty())
+//	{
+//		namedWindow("image", 1);//不能更改窗口
+//		namedWindow("foreground image", 1);
+//		namedWindow("mean background image", 1);
+//	}
+//	for (;;)
+//	{
+//		if (!pause)
+//		{
+//			i++;
+//			itoa(i, chari, 10);
+//			if (i<10)
+//			{
+//				src_img_name += "00";
+//			}
+//			else if (i<100)
+//			{
+//				src_img_name += "0";
+//			}
+//			else if (i>285)
+//			{
+//				i = -1;
+//			}
+//			if (i >= 230)
+//				update_bg_model = false;
+//			else update_bg_model = true;
+//
+//			src_img_name += chari;
+//			src_img_name += ".bmp";
+//
+//			img = imread(src_img_name);
+//			if (img.empty())
+//				break;
+//
+//			//update the model
+//			//bg_model->(img, fgmask, update_bg_model ? 0.005 : 0);//计算前景mask图像，其中输出fgmask为8-bit二进制图像，第3个参数为学习速率
+//			//refineSegments(img, fgmask, fgimg);
+//
+//			imshow("image", img);
+//			imshow("foreground image", fgimg);
+//
+//			src_img_name = "WavingTrees/b00";
+//
+//		}
+//		char k = (char)waitKey(80);
+//		if (k == 27) break;
+//
+//		if (k == ' ')
+//		{
+//			pause = !pause;
+//		}
+//	}
+//
+//	return 0;
+//}
+
+
+
+
+
 int main()
 {
 	//ss();
+	//gm();
+	//dt_background();
 	show();
 	return 0;
 }
