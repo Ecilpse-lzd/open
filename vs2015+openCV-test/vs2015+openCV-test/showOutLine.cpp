@@ -79,7 +79,7 @@ void FillInternalContours(IplImage *pBinary, IplImage *pBack)
 		}
 		cvRectangle(pBack, cvPoint(temporaryRect.x, temporaryRect.y),
 			cvPoint(temporaryRect.x + temporaryRect.width, temporaryRect.y + temporaryRect.height),
-			CV_RGB(255, 255, 255), 1, 8, 0);
+			CV_RGB(255, 0, 255), 4, 8, 0);
 		
 		centerW = temporaryRect.x + temporaryRect.width/2;
 		centerH = temporaryRect.y + temporaryRect.height/2;
