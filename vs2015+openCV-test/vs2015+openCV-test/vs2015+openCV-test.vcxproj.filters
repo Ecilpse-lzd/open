@@ -29,9 +29,6 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="vs2015+openCV-test.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="showOutLine.cpp">
       <Filter>源文件</Filter>
     </ClCompile>

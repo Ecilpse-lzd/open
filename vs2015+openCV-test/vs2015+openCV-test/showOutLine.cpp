@@ -44,7 +44,7 @@ bool graFilterMid(IplImage* &image, int k)
 	return true;
 }
 
-void FillInternalContours(IplImage *pBinary, double dAreaThre)
+void FillInternalContours(IplImage *pBinary, IplImage *pBack)
 {
 	double dConArea;
 	CvSeq *pContour = NULL;
@@ -77,7 +77,7 @@ void FillInternalContours(IplImage *pBinary, double dAreaThre)
 				temporaryRect = rect;
 			}	
 		}
-		cvRectangle(pBinary, cvPoint(temporaryRect.x, temporaryRect.y),
+		cvRectangle(pBack, cvPoint(temporaryRect.x, temporaryRect.y),
 			cvPoint(temporaryRect.x + temporaryRect.width, temporaryRect.y + temporaryRect.height),
 			CV_RGB(255, 255, 255), 1, 8, 0);
 		
@@ -158,7 +158,7 @@ void show()
 			pFrImg->origin = IPL_ORIGIN_BL;
 			pBkImg->origin = IPL_ORIGIN_BL;
 			
-			FillInternalContours(pFrImg, 300);
+			FillInternalContours(pFrImg, pFrame);
 			cvShowImage("video", pFrame);
 			//cvShowImage("background", pBkImg);
 			cvShowImage("foreground", pFrImg);
