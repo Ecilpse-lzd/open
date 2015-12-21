@@ -58,26 +58,27 @@ void FillInternalContours(IplImage *pBinary, double dAreaThre)
 		// 外轮廓循环   
 		int wai = 0;
 		int nei = 0;
+		int centerW,centerH;
+		CvRect temporaryRect;
+		double mexArea = 0;
 		for (; pContour != NULL; pContour = pContour->h_next)
 		{
+			
 			wai++;
-			// 内轮廓循环   
-			for (pConInner = pContour->v_next; pConInner != NULL; pConInner = pConInner->h_next)
-			{
-				nei++;
-				// 内轮廓面积   
-				dConArea = fabs(cvContourArea(pConInner, CV_WHOLE_SEQ));
-				printf("内轮廓面积%f\n", dConArea);
-			}
 			CvRect rect = cvBoundingRect(pContour, 0);
-			cvRectangle(pBinary, cvPoint(rect.x, rect.y),
-				cvPoint(rect.x + rect.width, rect.y + rect.height),
-				CV_RGB(255, 255, 255), 1, 8, 0);
+			
 			dConArea = fabs(cvContourArea(pContour, CV_WHOLE_SEQ));
-			printf("外轮廓面积%f\n", dConArea);
+			if (mexArea<dConArea)
+			{
+				mexArea = dConArea;
+				temporaryRect = rect;
+			}			
 		}
-
-		//printf("外轮廓数 = %d, 内轮廓数 = %d\n", wai, nei);
+		cvRectangle(pBinary, cvPoint(temporaryRect.x, temporaryRect.y),
+			cvPoint(temporaryRect.x + temporaryRect.width, temporaryRect.y + temporaryRect.height),
+			CV_RGB(255, 255, 255), 1, 8, 0);
+		printf("轮廓面积%f\n", mexArea);
+		
 		cvReleaseMemStorage(&pStorage);
 		pStorage = NULL;
 	}
@@ -373,7 +374,7 @@ void show()
 			//如果有按键事件，则跳出循环  
 			//此等待也为cvShowImage函数提供时间完成显示  
 			//等待时间可以根据CPU速度调整  
-			if (cvWaitKey(2) >= 0)
+			if (cvWaitKey(10) >= 0)
 				break;
 
 
