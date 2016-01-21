@@ -1,8 +1,5 @@
 #include"stdafx.h"
 
-
-
-
 bool graFilterMid(IplImage* &image, int k)
 {
 	if (image == NULL)
@@ -61,36 +58,36 @@ void FillInternalContours(IplImage *pBinary, IplImage *pBack)
 		// 外轮廓循环   
 		int wai = 0;
 		int nei = 0;
-		int centerW,centerH;
+		int centerW, centerH;
 		CvRect temporaryRect;
 		double mexArea = 0;
 		for (; pContour != NULL; pContour = pContour->h_next)
 		{
-			
+
 			wai++;
 			CvRect rect = cvBoundingRect(pContour, 0);
-			
+
 			dConArea = fabs(cvContourArea(pContour, CV_WHOLE_SEQ));
 			if (mexArea<dConArea)
 			{
 				mexArea = dConArea;
 				temporaryRect = rect;
-			}	
+			}
 		}
 		cvRectangle(pBack, cvPoint(temporaryRect.x, temporaryRect.y),
 			cvPoint(temporaryRect.x + temporaryRect.width, temporaryRect.y + temporaryRect.height),
 			CV_RGB(255, 0, 255), 4, 8, 0);
-		
-		centerW = temporaryRect.x + temporaryRect.width/2;
-		centerH = temporaryRect.y + temporaryRect.height/2;
-		printf("轮廓面积%f,中点坐标X : %d,Y : %d\n", mexArea,centerW,centerH);
+
+		centerW = temporaryRect.x + temporaryRect.width / 2;
+		centerH = temporaryRect.y + temporaryRect.height / 2;
+		printf("轮廓面积%f,中点坐标X : %d,Y : %d\n", mexArea, centerW, centerH);
 		cvReleaseMemStorage(&pStorage);
 		pStorage = NULL;
 	}
 }
 
 //找到运动物体
-void show() 
+void show()
 {
 	IplImage* pFrame = NULL;
 	IplImage* pFrImg = NULL;
@@ -109,8 +106,8 @@ void show()
 	cvMoveWindow("background", 360, 0);
 	cvMoveWindow("foreground", 690, 0);
 
-	pCapture = cvCaptureFromFile("d:\\测试\\345.mp4");
-	//	pCapture = cvCreateCameraCapture(0);
+	//pCapture = cvCaptureFromFile("d:\\测试\\345.mp4");
+		pCapture = cvCreateCameraCapture(1);
 	while (pFrame = cvQueryFrame(pCapture))
 	{
 		nFrmNum++;
@@ -135,9 +132,9 @@ void show()
 		{
 			cvCvtColor(pFrame, pFrImg, CV_BGR2GRAY);
 			graFilterMid(pFrImg, 1);
-			
+
 			//先做高斯滤波，以平滑图像  
-			
+
 			cvSmooth(pFrImg, pFrImg, CV_GAUSSIAN, 3, 0, 0);
 			cvConvert(pFrImg, pFrameMat);
 			//当前帧跟背景图相减  
@@ -157,7 +154,7 @@ void show()
 			pFrame->origin = IPL_ORIGIN_BL;
 			pFrImg->origin = IPL_ORIGIN_BL;
 			pBkImg->origin = IPL_ORIGIN_BL;
-			
+
 			FillInternalContours(pFrImg, pFrame);
 			cvShowImage("video", pFrame);
 			//cvShowImage("background", pBkImg);
@@ -167,8 +164,6 @@ void show()
 			//等待时间可以根据CPU速度调整  
 			if (cvWaitKey(10) >= 0)
 				break;
-
-
 		}
 
 	}
@@ -188,17 +183,98 @@ void show()
 
 }
 
+void refineSegments(const Mat& img, Mat& mask, Mat& dst)
+{
+	int niters = 3;
+
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	int threshold_value = 0;
+	int threshold_type = 3;;
+	Mat temp;
+	Mat temp1;
+
+	dilate(mask, temp, Mat(), Point(-1, -1), niters);//膨胀，3*3的element，迭代次数为niters
+	erode(temp, temp, Mat(), Point(-1, -1), niters * 2);//腐蚀
+	dilate(temp, temp, Mat(), Point(-1, -1), niters);
+
+	threshold(temp, temp1, threshold_value, 255, threshold_type);
+
+	findContours(temp1, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);//找轮廓
+
+	dst = Mat::zeros(img.size(), CV_8UC3);
+
+	if (contours.size() == 0)
+		return;
+
+	// iterate through all the top-level contours,
+	// draw each connected component with its own random color
+	int idx = 0, largestComp = 0;
+	double maxArea = 0;
+
+	for (; idx >= 0; idx = hierarchy[idx][0])//这句没怎么看懂
+	{
+		const vector<Point>& c = contours[idx];
+		double area = fabs(contourArea(Mat(c)));
+		if (area > maxArea)
+		{
+			maxArea = area;
+			largestComp = idx;//找出包含面积最大的轮廓
+		}
+	}
+	Scalar color(0, 255, 0);
+	drawContours(dst, contours, largestComp, color, CV_FILLED, 8, hierarchy);
+}
 
 
 
+void testMOG2()
+{
+	VideoCapture capture(0);
+	
+	Mat frame ,back, fgimg;
+	int niters = 3;
 
 
+	
+	Ptr<BackgroundSubtractor> MOG2 = createBackgroundSubtractorMOG2();
+	bool isupdate =true,isrun = false; 
+	int frameNumber = 0;
+	while (true)
+	{
+		++frameNumber;
+		if (frameNumber>500 && !isrun)
+		{
+			cout << "学习结束";
+			isupdate = false;
+			isrun = true;
+		}
+		capture.read(frame);
+		MOG2->apply(frame,back,isupdate?0.005:0);
+
+		if(isrun)
+		{
+			//dilate(back, back, Mat(), Point(-1, -1), niters);//膨胀，3*3的element，迭代次数为niters
+			//erode(back, back, Mat(), Point(-1, -1), niters * 2);//腐蚀
+			//dilate(back, back, Mat(), Point(-1, -1), niters);
+
+			refineSegments(frame, back, fgimg);
+
+
+			imshow("sh", fgimg);
+			MOG2->getBackgroundImage(back);
+			imshow("sh1", back);
+		}
+		waitKey(5);
+	}
+}
 
 int main()
 {
 	//ss();
 	//gm();
 	//dt_background();
-	show();
+	//show();
+	testMOG2();
 	return 0;
 }

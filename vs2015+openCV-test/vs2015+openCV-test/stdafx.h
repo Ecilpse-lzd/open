@@ -11,7 +11,9 @@
 #include <tchar.h>
 #include<cv.h>
 
-#include<highgui.h>
+#include <opencv2\video\background_segm.hpp>
+
+#include <highgui.h>
 #include <opencv/cv.h>
 #include <opencv/cvaux.h>
 #include <opencv/cxcore.h>
@@ -19,13 +21,21 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2\video\background_segm.hpp>
-#include<opencv2/highgui/highgui.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include <iostream>
 #include <stdio.h>
 #include <stdarg.h>
 #include <math.h>
 #include <iostream>
-#include<ctype.h>
+#include <ctype.h>
+
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/video/background_segm.hpp>
+//C
+#include <stdio.h>
+//C++
+#include <iostream>
+#include <sstream>
 
 #include <stdio.h>
 #include <string>
