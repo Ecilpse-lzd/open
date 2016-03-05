@@ -195,7 +195,7 @@ void refineSegments(const Mat& img, Mat& mask, Mat& dst)
 	Mat temp1;
 
 	dilate(mask, temp, Mat(), Point(-1, -1), niters);//膨胀，3*3的element，迭代次数为niters
-	erode(temp, temp, Mat(), Point(-1, -1), niters * 2);//腐蚀
+	erode(temp, temp, Mat(), Point(-1, -1), niters * 3);//腐蚀
 	dilate(temp, temp, Mat(), Point(-1, -1), niters);
 
 	threshold(temp, temp1, threshold_value, 255, threshold_type);
@@ -234,9 +234,6 @@ void testMOG2()
 	
 	Mat frame ,back, fgimg;
 	int niters = 3;
-
-
-	
 	Ptr<BackgroundSubtractor> MOG2 = createBackgroundSubtractorMOG2();
 	bool isupdate =true,isrun = false; 
 	int frameNumber = 0;
@@ -250,21 +247,17 @@ void testMOG2()
 			isrun = true;
 		}
 		capture.read(frame);
-		MOG2->apply(frame,back,isupdate?0.005:0);
+		MOG2->apply(frame,back,isupdate?0.008:0);
 
 		if(isrun)
 		{
-			//dilate(back, back, Mat(), Point(-1, -1), niters);//膨胀，3*3的element，迭代次数为niters
-			//erode(back, back, Mat(), Point(-1, -1), niters * 2);//腐蚀
-			//dilate(back, back, Mat(), Point(-1, -1), niters);
-
 			refineSegments(frame, back, fgimg);
-
-
 			imshow("sh", fgimg);
 			MOG2->getBackgroundImage(back);
 			imshow("sh1", back);
 		}
+		MOG2->getBackgroundImage(back);
+		imshow("sh1", back);
 		waitKey(5);
 	}
 }
@@ -274,7 +267,7 @@ int main()
 	//ss();
 	//gm();
 	//dt_background();
-	//show();
-	testMOG2();
+	show();
+	//testMOG2();
 	return 0;
 }
